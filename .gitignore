@@ -9,3 +9,5 @@
 *.gem
 .byebug_history
 test.rb
+.tool-versions
+.idea
