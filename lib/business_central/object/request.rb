@@ -68,21 +68,28 @@ module BusinessCentral
             response
           elsif Response.success_no_content?(request.code.to_i)
             true
+          elsif structured_error?(response)
+            raise_structured_error(request.code, response[:error])
           elsif Response.unauthorized?(request.code.to_i)
             raise UnauthorizedException
           elsif Response.not_found?(request.code.to_i)
             raise NotFoundException
-          elsif !response.fetch(:error, nil).nil?
-            case response[:error][:code]
-            when 'Internal_CompanyNotFound'
-              raise CompanyNotFoundException
-            else
-              raise ApiException,
-                    "#{request.code} - #{response[:error][:code]} #{response[:error][:message]}"
-            end
           else
             raise ApiException, "#{request.code} - API call failed"
           end
+        end
+
+        # A structured `error` body means Business Central rejected the request for a specific,
+        # documented reason (e.g. a bad reference), regardless of HTTP status - that reason is
+        # more useful than the generic exception the raw status code would otherwise raise.
+        def structured_error?(response)
+          response.is_a?(Hash) && !response.fetch(:error, nil).nil?
+        end
+
+        def raise_structured_error(status_code, error)
+          raise CompanyNotFoundException if error[:code] == 'Internal_CompanyNotFound'
+
+          raise ApiException, "#{status_code} - #{error[:code]} #{error[:message]}"
         end
       end
     end
