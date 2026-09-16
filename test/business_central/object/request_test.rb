@@ -91,6 +91,35 @@ class BusinessCentral::Object::RequestTest < Minitest::Test
     end
   end
 
+  def test_get_request_returns_error_detail_for_404_with_body
+    stub_request(:get, @url)
+      .to_return(
+        status: 404,
+        body: {
+          error: {
+            code: 'Internal_RecordNotFound',
+            message: 'The Sales Line does not exist.'
+          }
+        }.to_json
+      )
+
+    exception = assert_raises(BusinessCentral::ApiException) do
+      BusinessCentral::Object::Request.get(@client, @url)
+    end
+
+    assert_equal('404 - Internal_RecordNotFound The Sales Line does not exist.', exception.message)
+  end
+
+  def test_get_request_returns_not_found_with_no_body
+    stub_request(:get, @url).to_return(status: 404)
+
+    exception = assert_raises(BusinessCentral::NotFoundException) do
+      BusinessCentral::Object::Request.get(@client, @url)
+    end
+
+    assert_equal('Not Found - The URL provided cannot be found', exception.message)
+  end
+
   def test_get_request_returns_error_company_not_found
     stub_request(:get, @url)
       .to_return(
